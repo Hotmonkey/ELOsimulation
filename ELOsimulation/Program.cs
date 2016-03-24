@@ -7,15 +7,28 @@ namespace ELOsimulation
     {
         static void Main(string[] args)
         {
-            Player p = new Player(1595);
-            p.CalcRating(BattleResult.LOSE, 1595);
-            Console.WriteLine(p.Rating);
+            Player p1 = new Player(1500);
+            Player p2 = new Player(1500);
+            Battle ba = new Battle(p1, p2);
+            for (int i = 0; i < 10; i++)
+            {
+                Console.WriteLine(ba.DoBattle().ToString());
+            }
+            Console.WriteLine(p1.Rating);
+            Console.WriteLine(p2.Rating);
         }
+    }
+
+    enum BattleResult
+    {
+        WIN,
+        DRAW,
+        LOSE
     }
 
     class Player
     {
-        const int K = 64;
+        const int K = 60;
         const float S_WIN = 1f;
         const float S_DRAW = 0.5f;
         const float S_LOSE = 0f;
@@ -36,7 +49,7 @@ namespace ELOsimulation
             return Rating;
         }
 
-        float CalcExpectation(int opponentRating)
+        public float CalcExpectation(int opponentRating)
         {
             return 1 / (1 + (float)Math.Pow(10, (double)((opponentRating - rating) / 400.0f)));
         }
@@ -56,11 +69,40 @@ namespace ELOsimulation
         }
     }
 
-    enum BattleResult
+    class Battle
     {
-        WIN,
-        DRAW,
-        LOSE
+        static Random RAN = new Random();
+
+        Player p1;
+        Player p2;
+
+        public Battle(Player p1, Player p2)
+        {
+            this.p1 = p1;
+            this.p2 = p2;
+        }
+
+        public BattleResult DoBattle()
+        {
+            float e1 = p1.CalcExpectation(p2.Rating);
+            if ((float)RAN.NextDouble() <= e1)
+            {
+                p1.CalcRating(BattleResult.WIN, p2.Rating);
+                p2.CalcRating(BattleResult.LOSE, p1.Rating);
+                return BattleResult.WIN;
+            }
+            else
+            {
+                p1.CalcRating(BattleResult.LOSE, p2.Rating);
+                p2.CalcRating(BattleResult.WIN, p1.Rating);
+                return BattleResult.LOSE;
+            }
+        }
+    }
+
+    class Game
+    {
+ 
     }
 
 }

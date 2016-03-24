@@ -4,3 +4,9 @@ c:\users\kanye\documents\visual studio 2015\Projects\ELOsimulation\ELOsimulation
 c:\users\kanye\documents\visual studio 2015\Projects\ELOsimulation\ELOsimulation\obj\Debug\ELOsimulation.csprojResolveAssemblyReference.cache
 c:\users\kanye\documents\visual studio 2015\Projects\ELOsimulation\ELOsimulation\obj\Debug\ELOsimulation.exe
 c:\users\kanye\documents\visual studio 2015\Projects\ELOsimulation\ELOsimulation\obj\Debug\ELOsimulation.pdb
+C:\Users\Easyroid\documents\visual studio 2013\Projects\ELOsimulation\ELOsimulation\bin\Debug\ELOsimulation.exe.config
+C:\Users\Easyroid\documents\visual studio 2013\Projects\ELOsimulation\ELOsimulation\obj\Debug\ELOsimulation.exe
+C:\Users\Easyroid\documents\visual studio 2013\Projects\ELOsimulation\ELOsimulation\obj\Debug\ELOsimulation.pdb
+C:\Users\Easyroid\documents\visual studio 2013\Projects\ELOsimulation\ELOsimulation\bin\Debug\ELOsimulation.exe
+C:\Users\Easyroid\documents\visual studio 2013\Projects\ELOsimulation\ELOsimulation\bin\Debug\ELOsimulation.pdb
+C:\Users\Easyroid\documents\visual studio 2013\Projects\ELOsimulation\ELOsimulation\obj\Debug\ELOsimulation.csprojResolveAssemblyReference.cache
