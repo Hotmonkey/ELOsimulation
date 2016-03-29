@@ -7,8 +7,8 @@ namespace ELOsimulation
     {
         static void Main(string[] args)
         {
-            Player p1 = new Player(1500);
-            Player p2 = new Player(1500);
+            Player p1 = new Player(1900);
+            Player p2 = new Player(1900);
             Battle ba = new Battle(p1, p2);
             for (int i = 0; i < 10; i++)
             {
@@ -45,8 +45,36 @@ namespace ELOsimulation
 
         public int CalcRating(BattleResult br, int opponentRating)
         {
-            Rating += (int)(K * (CalcScore(br) - CalcExpectation(opponentRating)));
+            Rating += CalcDelta(br, opponentRating);
             return Rating;
+        }
+
+        public int CalcRating(BattleResult br, Player p)
+        {
+            int delta = CalcDelta(br, p.Rating);
+            Rating += delta;
+            p.Rating -= delta;
+            return Rating;
+        }
+
+        public int CalcDeltaRating(BattleResult br, int opponentRating)
+        {
+            int delta = CalcDelta(br, opponentRating);
+            Rating += delta;
+            return delta;
+        }
+
+        public int CalcDeltaRating(BattleResult br, Player p)
+        {
+            int delta = CalcDelta(br, p.Rating);
+            Rating += delta;
+            p.Rating -= delta;
+            return delta;
+        }
+
+        int CalcDelta(BattleResult br, int opponentRating)
+        {
+            return (int)(K * (CalcScore(br) - CalcExpectation(opponentRating)));
         }
 
         public float CalcExpectation(int opponentRating)
@@ -87,14 +115,12 @@ namespace ELOsimulation
             float e1 = p1.CalcExpectation(p2.Rating);
             if ((float)RAN.NextDouble() <= e1)
             {
-                p1.CalcRating(BattleResult.WIN, p2.Rating);
-                p2.CalcRating(BattleResult.LOSE, p1.Rating);
+                p1.CalcRating(BattleResult.WIN, p2);
                 return BattleResult.WIN;
             }
             else
             {
-                p1.CalcRating(BattleResult.LOSE, p2.Rating);
-                p2.CalcRating(BattleResult.WIN, p1.Rating);
+                p1.CalcRating(BattleResult.LOSE, p2);
                 return BattleResult.LOSE;
             }
         }
