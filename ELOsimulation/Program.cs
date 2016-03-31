@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace ELOsimulation
 {
@@ -33,15 +34,43 @@ namespace ELOsimulation
         const float S_DRAW = 0.5f;
         const float S_LOSE = 0f;
         const int BASELINE = 0;
+        static int PlayerCount;
+        static int HighestRating;
 
         int rating;
+        int pID;
+
+        Thread tSearchGame;
 
         public Player(int rating)
         {
+            AddPlayer();
             Rating = rating;
         }
 
-        public int Rating { get { return rating; } private set { rating = value < 0 ? 0 : value; } }
+        public Player()
+        {
+            AddPlayer();
+        }
+
+        void AddPlayer()
+        {
+            pID = ++PlayerCount; ;
+        }
+
+        public int Rating 
+        { 
+            get { return rating; } 
+            private set 
+            { 
+                rating = value < 0 ? 0 : value;
+                if (HighestRating < rating)
+                {
+                    HighestRating = rating;
+                }
+            } 
+        }
+        public Thread TSearchGame { get { return tSearchGame; } set { tSearchGame = value; } }
 
         public int CalcRating(BattleResult br, int opponentRating)
         {
@@ -99,7 +128,11 @@ namespace ELOsimulation
 
     class Battle
     {
+        const int BATTLELIMIT = 1000;
+        static int BattleCount;
         static Random RAN = new Random();
+
+        static bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
 
         Player p1;
         Player p2;
@@ -112,6 +145,7 @@ namespace ELOsimulation
 
         public BattleResult DoBattle()
         {
+            BattleCount++;
             float e1 = p1.CalcExpectation(p2.Rating);
             if ((float)RAN.NextDouble() <= e1)
             {
@@ -128,6 +162,68 @@ namespace ELOsimulation
 
     class Game
     {
+        const int AXISBOUND = 99999;
+        const int[] SEARCHRANGE = { 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
+        static int[] RatingAxis = new int[100000];
+        static bool AxisLock;
+        static bool GameEnd;
+        static int ThreadCount;
+        static Dictionary<int, Player> playerDic = new Dictionary<int, Player>();
+
+        void AbortAllThread()
+        {
+            foreach (var v in playerDic)
+            {
+                v.Value.TSearchGame.Abort();
+            }
+            Console.WriteLine("-----------------------------Game End!---------------------------------");
+
+        }
+
+        public void SearchGame(Player p)
+        {
+            p.TSearchGame = new Thread(new ParameterizedThreadStart(SearchGameThread));
+            p.TSearchGame.IsBackground = true;
+            p.TSearchGame.Start(p);
+            ThreadCount++;
+        }
+
+        void SearchGameThread(object obj)
+        {
+            Player p = (Player)obj;
+            int range, lowerBound, upperBound;
+            while (!GameEnd)
+            {
+                for (int i = 0; !GameEnd && i < SEARCHRANGE.Length; i++)
+                {
+                    range = SEARCHRANGE[i];
+                    lowerBound = p.Rating - range < 0 ? 0 : p.Rating - range;
+                    upperBound = p.Rating + range;
+                    for (int j = lowerBound; j <= upperBound; j++)
+                    {
+                        if (j > AXISBOUND)
+                        {
+                            GameEnd = true;
+                            AbortAllThread();
+                            p.TSearchGame.Join();
+                            break;
+                        }
+
+                        while (!AxisLock)
+                        {
+                            AxisLock = true;
+                            if (RatingAxis[j] != 0)
+                            {
+                                //清理现场
+                                //等待停止线程后比赛
+                                //停止线程
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         
     }
 
