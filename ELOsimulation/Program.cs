@@ -35,7 +35,9 @@ namespace ELOsimulation
         const float S_LOSE = 0f;
         const int BASELINE = 0;
         static int PlayerCount;
-        static int HighestRating;
+        static int highestRating;
+
+        public static int HighestRating { get { return highestRating; } private set { highestRating = value; } }
 
         int rating;
         int pID;
@@ -163,7 +165,7 @@ namespace ELOsimulation
     class Game
     {
         const int AXISBOUND = 99999;
-        const int[] SEARCHRANGE = { 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
+        static readonly int[] SEARCHRANGE = new int[10]{ 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
         static int[] RatingAxis = new int[100000];
         static bool AxisLock;
         static bool GameEnd;
@@ -177,7 +179,7 @@ namespace ELOsimulation
                 v.Value.TSearchGame.Abort();
             }
             Console.WriteLine("-----------------------------Game End!---------------------------------");
-
+            Console.WriteLine(Player.HighestRating);
         }
 
         public void SearchGame(Player p)
