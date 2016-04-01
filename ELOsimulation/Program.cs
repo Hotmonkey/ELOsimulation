@@ -72,6 +72,8 @@ namespace ELOsimulation
                 }
             } 
         }
+
+        public int PID { get { return pID; } }
         public Thread TSearchGame { get { return tSearchGame; } set { tSearchGame = value; } }
 
         public int CalcRating(BattleResult br, int opponentRating)
@@ -211,15 +213,21 @@ namespace ELOsimulation
                             break;
                         }
 
-                        while (!AxisLock)
+                        while (AxisLock)
                         {
-                            AxisLock = true;
-                            if (RatingAxis[j] != 0)
-                            {
-                                //清理现场
-                                //等待停止线程后比赛
-                                //停止线程
-                            }
+                            Thread.Sleep(10);
+                        }
+
+                        AxisLock = true;
+                        if (RatingAxis[j] != 0)
+                        {
+                            //清理现场
+                            //等待停止线程后比赛
+                            //停止线程
+                        }
+                        else
+                        {
+                            RatingAxis[j] = p.PID;
                         }
                     }
                 }
