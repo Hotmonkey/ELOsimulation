@@ -237,4 +237,193 @@ namespace ELOsimulation
         
     }
 
+    class SegmentTree
+    {
+        SegmentNode root = null;
+        SegmentNode Root { get { return root; } set { root = value; } }
+
+        int count;
+        public int Count { get { return count; } private set { count = value; } }
+
+        public void ShowTree()
+        {
+            Queue<SegmentNode> queue = new Queue<SegmentNode>();
+            SegmentNode temp;
+            queue.Enqueue(Root);
+            while (queue.Count > 0)
+            {
+                int i = 0, qCount = queue.Count;
+                while (i++ < qCount)
+                {
+                    temp = queue.Dequeue();
+                    if (temp.LeftNode != null)
+                    {
+                        queue.Enqueue(temp.LeftNode);
+                    }
+                    if (temp.RightNode != null)
+                    {
+                        queue.Enqueue(temp.RightNode);
+                    }
+                    Console.Write("[" + temp.LowerBound + "," + temp.UpperBound + "]\t");
+                }
+                Console.Write("\n\r");
+            }
+        }
+
+        public void BuildTree(params SegmentNode[] args)
+        {
+            foreach (SegmentNode node in args)
+            {
+                AddNode(node);
+            }
+        }
+
+        public SegmentNode AddNode(SegmentNode arg)
+        {
+            if (Root == null)
+            {
+                Root = arg;
+                Count++;
+                return null;
+            }
+
+            SegmentNode currentNode = Root, parentNode = null;
+            while (true)
+            {
+                if (arg.UpperBound < currentNode.LowerBound)
+                {
+                    parentNode = currentNode;
+                    currentNode = currentNode.LeftNode;
+                    if (currentNode == null)
+                    {
+                        parentNode.LeftNode = arg;
+                        break;
+                    }
+                }
+                else if (arg.LowerBound > currentNode.UpperBound)
+                {
+                    parentNode = currentNode;
+                    currentNode = currentNode.RightNode;
+                    if (currentNode == null)
+                    {
+                        parentNode.RightNode = arg;
+                        break;
+                    }
+                }
+                else
+                {
+                    SegmentNode Result = currentNode;
+                    RemoveNode(currentNode, parentNode);
+                    return currentNode;
+                }
+            }
+            Count++;
+            return null;
+        }
+
+        public bool RemoveNode(SegmentNode arg)
+        {
+            if (arg == null)
+            {
+                return true;
+            }
+            if (Root == null)
+            {
+                return false;
+            }
+
+            SegmentNode currentNode = Root, parentNode = null;
+            while (currentNode != null)
+            {
+                if (arg.UpperBound < currentNode.LowerBound)
+                {
+                    parentNode = currentNode;
+                    currentNode = currentNode.LeftNode;
+                }
+                else if (arg.LowerBound > currentNode.UpperBound)
+                {
+                    parentNode = currentNode;
+                    currentNode = currentNode.RightNode;
+                }
+                else
+                {
+                    if (arg == currentNode)
+                    {
+                        RemoveNode(currentNode, parentNode);
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        void RemoveNode(SegmentNode arg, SegmentNode parent)
+        {
+            Count--;
+            if (arg == Root)
+            {
+                if (arg.LeftNode != null)
+                {
+                    Root = arg.LeftNode;
+                }
+                else
+                {
+                    Root = arg.RightNode;
+                    return;
+                }
+            }
+            if (parent != null)
+            {
+                parent.LeftNode = arg.LeftNode;
+            }
+            if (arg.RightNode == null)
+            {
+                arg.LeftNode = null;
+                return;
+            }
+
+            SegmentNode currentNode = arg.LeftNode, parentNode = parent;
+            while (currentNode != null)
+            {
+                parentNode = currentNode;
+                currentNode = currentNode.RightNode;
+            }
+            parentNode.RightNode = arg.RightNode;
+            arg.LeftNode = arg.RightNode = null;
+        }
+
+    }
+
+    class SegmentNode
+    {
+        static int snID;
+        public static int SNID { get { return snID; } private set { snID = value; } }
+
+        int lowerBound;
+        int upperBound;
+        SegmentNode leftNode = null;
+        SegmentNode rightNode = null;
+        Object value = null;
+
+        public int LowerBound { get { return lowerBound; } private set { lowerBound = value; } }
+        public int UpperBound { get { return upperBound; } private set { upperBound = value; } }
+
+        public SegmentNode LeftNode { get { return leftNode; } set { leftNode = value; } }
+        public SegmentNode RightNode { get { return rightNode; } set { rightNode = value; } }
+
+        public SegmentNode()
+        {
+            SNID++;
+        }
+
+        public SegmentNode(int lower, int upper, Object obj)
+        {
+            LowerBound = lower;
+            UpperBound = upper;
+            value = obj;
+            SNID++;
+        }
+    }
+
 }
