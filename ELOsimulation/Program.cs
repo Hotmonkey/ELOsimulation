@@ -8,15 +8,7 @@ namespace ELOsimulation
     {
         static void Main(string[] args)
         {
-            Player p1 = new Player(1900);
-            Player p2 = new Player(1900);
-            Battle ba = new Battle(p1, p2);
-            for (int i = 0; i < 10; i++)
-            {
-                Console.WriteLine(ba.DoBattle().ToString());
-            }
-            Console.WriteLine(p1.Rating);
-            Console.WriteLine(p2.Rating);
+            //可以开始了
         }
     }
 
@@ -136,7 +128,7 @@ namespace ELOsimulation
         static int BattleCount;
         static Random RAN = new Random();
 
-        static bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
+        public static bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
 
         Player p1;
         Player p2;
@@ -166,13 +158,15 @@ namespace ELOsimulation
 
     class Game
     {
-        const int AXISBOUND = 99999;
+        const int LOCKINTERVAL = 10;
+        const int WAITINTERVAL = 1000;
         static readonly int[] SEARCHRANGE = new int[10]{ 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
         static int[] RatingAxis = new int[100000];
-        static bool AxisLock;
+        static bool TreeLock;
         static bool GameEnd;
         static int ThreadCount;
         static Dictionary<int, Player> playerDic = new Dictionary<int, Player>();
+        static SegmentTree threadTree= new SegmentTree();
 
         void AbortAllThread()
         {
@@ -188,6 +182,7 @@ namespace ELOsimulation
         {
             p.TSearchGame = new Thread(new ParameterizedThreadStart(SearchGameThread));
             p.TSearchGame.IsBackground = true;
+            playerDic.Add(p.PID, p);
             p.TSearchGame.Start(p);
             ThreadCount++;
         }
@@ -203,9 +198,24 @@ namespace ELOsimulation
                     range = SEARCHRANGE[i];
                     lowerBound = p.Rating - range < 0 ? 0 : p.Rating - range;
                     upperBound = p.Rating + range;
-                    for (int j = lowerBound; j <= upperBound; j++)
+                    SegmentNode node = new SegmentNode(lowerBound, upperBound, p);
+
+                    GetLock();
+
+                    SegmentNode anotherNode = threadTree.AddNode(node);
+                    if (anotherNode == null)
                     {
-                        if (j > AXISBOUND)
+                        Unlock();
+                        WaitForOpponent();
+                    }
+                    else
+                    {
+                        Player p2 = (Player)anotherNode.Value;
+                        playerDic.Remove(p2.PID);
+                        p2.TSearchGame.Abort();
+                        p2.TSearchGame.Join();
+
+                        if (!Battle.DoMoreBattle)
                         {
                             GameEnd = true;
                             AbortAllThread();
@@ -213,28 +223,35 @@ namespace ELOsimulation
                             break;
                         }
 
-                        while (AxisLock)
-                        {
-                            Thread.Sleep(10);
-                        }
-
-                        AxisLock = true;
-                        if (RatingAxis[j] != 0)
-                        {
-                            //清理现场
-                            //等待停止线程后比赛
-                            //停止线程
-                        }
-                        else
-                        {
-                            RatingAxis[j] = p.PID;
-                        }
+                        playerDic.Remove(p.PID);
+                        Battle battle = new Battle(p, p2);
+                        battle.DoBattle();
+                        p.TSearchGame.Abort();
+                        p.TSearchGame.Join();
                     }
                 }
             }
         }
 
-        
+        void GetLock()
+        {
+            while (TreeLock)
+            {
+                Thread.Sleep(LOCKINTERVAL);
+            }
+            TreeLock = true;
+        }
+
+        void Unlock()
+        {
+            TreeLock = false;
+        }
+
+        void WaitForOpponent()
+        {
+            Thread.Sleep(WAITINTERVAL);
+        }
+
     }
 
     class SegmentTree
@@ -411,6 +428,8 @@ namespace ELOsimulation
 
         public SegmentNode LeftNode { get { return leftNode; } set { leftNode = value; } }
         public SegmentNode RightNode { get { return rightNode; } set { rightNode = value; } }
+
+        public Object Value { get { return value; } }
 
         public SegmentNode()
         {
