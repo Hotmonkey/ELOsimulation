@@ -8,7 +8,7 @@ namespace ELOsimulation
     {
         static void Main(string[] args)
         {
-            //可以开始了
+            Game.GetInstance().StartGame();
         }
     }
 
@@ -49,7 +49,7 @@ namespace ELOsimulation
 
         void AddPlayer()
         {
-            pID = ++PlayerCount; ;
+            pID = ++PlayerCount;
         }
 
         public int Rating 
@@ -141,6 +141,7 @@ namespace ELOsimulation
 
         public BattleResult DoBattle()
         {
+            Console.WriteLine("Do Battle ----------------- " + p1.PID + " VS " + p2.PID);
             BattleCount++;
             float e1 = p1.CalcExpectation(p2.Rating);
             if ((float)RAN.NextDouble() <= e1)
@@ -165,21 +166,78 @@ namespace ELOsimulation
         static bool TreeLock;
         static bool GameEnd;
         static int ThreadCount;
+        static Player[] AllPlayers = new Player[50];
+        static Queue<Player> players = new Queue<Player>();
         static Dictionary<int, Player> playerDic = new Dictionary<int, Player>();
         static SegmentTree threadTree= new SegmentTree();
+        static readonly Random random = new Random();
+
+        static Game instance;
+
+        public static Game GetInstance()
+        {
+            if (instance == null)
+            {
+                instance = new Game();
+            }
+            return instance;
+        }
+
+        public void StartGame()
+        {
+            for (int i = 0; i < 50; i++)
+            {
+                AllPlayers[i] = new Player();
+                players.Enqueue(AllPlayers[i]);
+            }
+
+            Player tempPlayer;
+            while (!GameEnd)
+            {
+                while (players.Count > 0)
+                {
+                    tempPlayer = players.Dequeue();
+                    if (tempPlayer.TSearchGame != null && tempPlayer.TSearchGame.IsAlive)
+                    {
+                        players.Enqueue(tempPlayer);
+                    }
+                    else
+                    {
+                        SearchGame(tempPlayer);
+                    }
+                }
+            }
+
+            AbortAllThread();
+        }
+
 
         void AbortAllThread()
         {
             foreach (var v in playerDic)
             {
-                v.Value.TSearchGame.Abort();
+                if (v.Value.TSearchGame.IsAlive)
+                {
+                    ThreadCount--;
+                    v.Value.TSearchGame.Abort();
+                    v.Value.TSearchGame.Join();
+                }
             }
             Console.WriteLine("-----------------------------Game End!---------------------------------");
-            Console.WriteLine(Player.HighestRating);
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < 5; j++)
+                {
+                    Console.Write(AllPlayers[i * 5 + j].Rating + "\t");
+                }
+                Console.Write("\n\r");
+            }
+            Console.WriteLine("High:::" + Player.HighestRating);
         }
 
-        public void SearchGame(Player p)
+        void SearchGame(Player p)
         {
+            Console.WriteLine("Search Game ------------------- Player " + p.PID);
             p.TSearchGame = new Thread(new ParameterizedThreadStart(SearchGameThread));
             p.TSearchGame.IsBackground = true;
             playerDic.Add(p.PID, p);
@@ -189,54 +247,74 @@ namespace ELOsimulation
 
         void SearchGameThread(object obj)
         {
+            WaitRandomTime();
+
             Player p = (Player)obj;
+            Console.WriteLine("Start Thread ---------------------- PID ::: " + p.PID);
             int range, lowerBound, upperBound;
-            while (!GameEnd)
+            SegmentNode node = new SegmentNode();
+            for (int i = 0; !GameEnd && i < SEARCHRANGE.Length; i++)
             {
-                for (int i = 0; !GameEnd && i < SEARCHRANGE.Length; i++)
+                if (GameEnd)
                 {
-                    range = SEARCHRANGE[i];
-                    lowerBound = p.Rating - range < 0 ? 0 : p.Rating - range;
-                    upperBound = p.Rating + range;
-                    SegmentNode node = new SegmentNode(lowerBound, upperBound, p);
+                    break;
+                }
+                Console.WriteLine("Search Range ---------------------- " + SEARCHRANGE[i]);
+                if (i > 0)
+                {
+                    threadTree.RemoveNode(node);
+                }
+                range = SEARCHRANGE[i];
+                lowerBound = p.Rating - range < 0 ? 0 : p.Rating - range;
+                upperBound = p.Rating + range;
+                node = new SegmentNode(lowerBound, upperBound, p);
 
-                    GetLock();
+                GetLock();
 
-                    SegmentNode anotherNode = threadTree.AddNode(node);
-                    if (anotherNode == null)
+                SegmentNode anotherNode = threadTree.AddNode(node);
+
+                Unlock();
+
+                if (anotherNode == null)
+                {
+                    WaitForOpponent();
+                }
+                else
+                {
+                    Player p2 = (Player)anotherNode.Value;
+                    playerDic.Remove(p2.PID);
+                    if (p2.TSearchGame.IsAlive)
                     {
-                        Unlock();
-                        WaitForOpponent();
-                    }
-                    else
-                    {
-                        Player p2 = (Player)anotherNode.Value;
-                        playerDic.Remove(p2.PID);
+                        ThreadCount--;
                         p2.TSearchGame.Abort();
                         p2.TSearchGame.Join();
-
-                        if (!Battle.DoMoreBattle)
-                        {
-                            GameEnd = true;
-                            AbortAllThread();
-                            p.TSearchGame.Join();
-                            break;
-                        }
-
-                        playerDic.Remove(p.PID);
-                        Battle battle = new Battle(p, p2);
-                        battle.DoBattle();
-                        p.TSearchGame.Abort();
-                        p.TSearchGame.Join();
                     }
+
+                    if (!Battle.DoMoreBattle)
+                    {
+                        GameEnd = true;
+                        p.TSearchGame.Join();
+                        break;
+                    }
+
+                    playerDic.Remove(p.PID);
+                    Battle battle = new Battle(p, p2);
+                    battle.DoBattle();
+                    players.Enqueue(p);
+                    players.Enqueue(p2);
+                    ThreadCount--;
+                    p.TSearchGame.Abort();
+                    p.TSearchGame.Join();
                 }
             }
+            ThreadCount--;
         }
 
         void GetLock()
         {
             while (TreeLock)
             {
+                Console.WriteLine("haha");
                 Thread.Sleep(LOCKINTERVAL);
             }
             TreeLock = true;
@@ -252,6 +330,11 @@ namespace ELOsimulation
             Thread.Sleep(WAITINTERVAL);
         }
 
+        void WaitRandomTime()
+        {
+            Thread.Sleep((int)(random.NextDouble() * 2000) + 1000);
+        }
+
     }
 
     class SegmentTree
@@ -264,8 +347,15 @@ namespace ELOsimulation
 
         public void ShowTree()
         {
+            if (Root == null)
+            {
+                Console.WriteLine("SegmentTree is empty!");
+                return;
+            }
+
             Queue<SegmentNode> queue = new Queue<SegmentNode>();
             SegmentNode temp;
+            
             queue.Enqueue(Root);
             while (queue.Count > 0)
             {
@@ -442,6 +532,16 @@ namespace ELOsimulation
             UpperBound = upper;
             value = obj;
             SNID++;
+        }
+
+        public void ShowNode()
+        {
+            Console.WriteLine("(" + LowerBound + ":::" + UpperBound + ")");
+        }
+
+        ~SegmentNode()
+        {
+            SNID--;
         }
     }
 
