@@ -166,7 +166,6 @@ namespace ELOsimulation
         static readonly int[] SEARCHRANGE = new int[10] { 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
         static bool TreeLock;
         static bool GameEnd;
-        static int ThreadCount;
         static Player[] AllPlayers = new Player[PLAYERCOUNT];
         static Queue<Player> players = new Queue<Player>();
         static bool[] playerState = new bool[PLAYERCOUNT];
@@ -232,7 +231,6 @@ namespace ELOsimulation
             {
                 if (playerState[i])
                 {
-                    ThreadCount--;
                     AllPlayers[i].TSearchGame.Abort();
                     AllPlayers[i].TSearchGame.Join();
                 }
@@ -268,7 +266,6 @@ namespace ELOsimulation
             p.TSearchGame.IsBackground = true;
             playerState[p.PID] = true;
             p.TSearchGame.Start(p);
-            ThreadCount++;
         }
 
         void SearchGameThread(object obj)
@@ -310,7 +307,6 @@ namespace ELOsimulation
                     playerState[p2.PID] = false;
                     if (p2.TSearchGame.IsAlive)
                     {
-                        ThreadCount--;
                         p2.TSearchGame.Abort();
                         p2.TSearchGame.Join();
                     }
@@ -337,13 +333,11 @@ namespace ELOsimulation
                     battle.DoBattle();
                     players.Enqueue(p);
                     players.Enqueue(p2);
-                    ThreadCount--;
                     p.TSearchGame.Abort();
                     p.TSearchGame.Join();
                 }
             }
             playerState[p.PID] = false;
-            ThreadCount--;
         }
 
         void GetLock()
