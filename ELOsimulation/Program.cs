@@ -129,6 +129,7 @@ namespace ELOsimulation
         static Random RAN = new Random();
 
         public static bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
+        public static int BATTLECOUNT { get { return BattleCount; } }
 
         Player p1;
         Player p2;
@@ -191,12 +192,16 @@ namespace ELOsimulation
                 players.Enqueue(AllPlayers[i]);
             }
 
-            Player tempPlayer;
+            Player tempPlayer = AllPlayers[0];
             while (!GameEnd)
             {
                 while (players.Count > 0)
                 {
                     tempPlayer = players.Dequeue();
+                    if (tempPlayer == null)
+                    {
+                        continue;
+                    }
                     if (tempPlayer.TSearchGame != null && tempPlayer.TSearchGame.IsAlive)
                     {
                         players.Enqueue(tempPlayer);
@@ -205,6 +210,11 @@ namespace ELOsimulation
                     {
                         SearchGame(tempPlayer);
                     }
+                }
+                if (tempPlayer == null)
+                {
+                    Console.WriteLine("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE:::");
+                    GameEnd = true;
                 }
             }
 
@@ -224,10 +234,16 @@ namespace ELOsimulation
                 }
             }
             Console.WriteLine("-----------------------------Game End!---------------------------------");
+            Console.WriteLine("Battle Count ---------------------------- " + Battle.BATTLECOUNT);
             for (int i = 0; i < 10; i++)
             {
                 for (int j = 0; j < 5; j++)
                 {
+                    if (AllPlayers[i * 5 + j] == null)
+                    {
+                        Console.Write("E:" + (i * 5 + j));
+                        continue;
+                    }
                     Console.Write(AllPlayers[i * 5 + j].Rating + "\t");
                 }
                 Console.Write("\n\r");
