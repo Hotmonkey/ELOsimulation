@@ -49,20 +49,20 @@ namespace ELOsimulation
 
         void AddPlayer()
         {
-            pID = ++PlayerCount;
+            pID = PlayerCount++;
         }
 
-        public int Rating 
-        { 
-            get { return rating; } 
-            private set 
-            { 
+        public int Rating
+        {
+            get { return rating; }
+            private set
+            {
                 rating = value < 0 ? 0 : value;
                 if (HighestRating < rating)
                 {
                     HighestRating = rating;
                 }
-            } 
+            }
         }
 
         public int PID { get { return pID; } }
@@ -124,7 +124,7 @@ namespace ELOsimulation
 
     class Battle
     {
-        const int BATTLELIMIT = 1000;
+        const int BATTLELIMIT = 1500;
         static int BattleCount;
         static Random RAN = new Random();
 
@@ -160,17 +160,17 @@ namespace ELOsimulation
 
     class Game
     {
+        const int PLAYERCOUNT = 50;
         const int LOCKINTERVAL = 10;
         const int WAITINTERVAL = 1000;
-        static readonly int[] SEARCHRANGE = new int[10]{ 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
-        static int[] RatingAxis = new int[100000];
+        static readonly int[] SEARCHRANGE = new int[10] { 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
         static bool TreeLock;
         static bool GameEnd;
         static int ThreadCount;
-        static Player[] AllPlayers = new Player[50];
+        static Player[] AllPlayers = new Player[PLAYERCOUNT];
         static Queue<Player> players = new Queue<Player>();
-        static Dictionary<int, Player> playerDic = new Dictionary<int, Player>();
-        static SegmentTree threadTree= new SegmentTree();
+        static bool[] playerState = new bool[PLAYERCOUNT];
+        static SegmentTree threadTree = new SegmentTree();
         static readonly Random random = new Random();
 
         static Game instance;
@@ -195,7 +195,7 @@ namespace ELOsimulation
             Player tempPlayer = AllPlayers[0];
             while (!GameEnd)
             {
-                while (players.Count > 0)
+                while (!GameEnd && players.Count > 0)
                 {
                     tempPlayer = players.Dequeue();
                     if (tempPlayer == null)
@@ -213,6 +213,11 @@ namespace ELOsimulation
                 }
                 if (tempPlayer == null)
                 {
+                    if (players.Count > 0)
+                    {
+                        Console.WriteLine("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ:::");
+                        Console.WriteLine(players.Peek() == null);
+                    }
                     Console.WriteLine("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE:::");
                     GameEnd = true;
                 }
@@ -221,21 +226,20 @@ namespace ELOsimulation
             AbortAllThread();
         }
 
-
         void AbortAllThread()
         {
-            foreach (var v in playerDic)
+            for (int i = 0; i < PLAYERCOUNT; i++)
             {
-                if (v.Value.TSearchGame.IsAlive)
+                if (playerState[i])
                 {
                     ThreadCount--;
-                    v.Value.TSearchGame.Abort();
-                    v.Value.TSearchGame.Join();
+                    AllPlayers[i].TSearchGame.Abort();
+                    AllPlayers[i].TSearchGame.Join();
                 }
             }
             Console.WriteLine("-----------------------------Game End!---------------------------------");
             Console.WriteLine("Battle Count ---------------------------- " + Battle.BATTLECOUNT);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < PLAYERCOUNT / 5; i++)
             {
                 for (int j = 0; j < 5; j++)
                 {
@@ -253,10 +257,16 @@ namespace ELOsimulation
 
         void SearchGame(Player p)
         {
+            if (GameEnd)
+            {
+                return;
+            }
+
             Console.WriteLine("Search Game ------------------- Player " + p.PID);
+            p.TSearchGame = null;
             p.TSearchGame = new Thread(new ParameterizedThreadStart(SearchGameThread));
             p.TSearchGame.IsBackground = true;
-            playerDic.Add(p.PID, p);
+            playerState[p.PID] = true;
             p.TSearchGame.Start(p);
             ThreadCount++;
         }
@@ -264,6 +274,11 @@ namespace ELOsimulation
         void SearchGameThread(object obj)
         {
             WaitRandomTime();
+
+            if (GameEnd)
+            {
+                return;
+            }
 
             Player p = (Player)obj;
             Console.WriteLine("Start Thread ---------------------- PID ::: " + p.PID);
@@ -288,6 +303,18 @@ namespace ELOsimulation
                 GetLock();
 
                 SegmentNode anotherNode = threadTree.AddNode(node);
+                Player p2 = null;
+                if (anotherNode != null)
+                {
+                    p2 = (Player)anotherNode.Value;
+                    playerState[p2.PID] = false;
+                    if (p2.TSearchGame.IsAlive)
+                    {
+                        ThreadCount--;
+                        p2.TSearchGame.Abort();
+                        p2.TSearchGame.Join();
+                    }
+                }
 
                 Unlock();
 
@@ -297,23 +324,15 @@ namespace ELOsimulation
                 }
                 else
                 {
-                    Player p2 = (Player)anotherNode.Value;
-                    playerDic.Remove(p2.PID);
-                    if (p2.TSearchGame.IsAlive)
-                    {
-                        ThreadCount--;
-                        p2.TSearchGame.Abort();
-                        p2.TSearchGame.Join();
-                    }
-
                     if (!Battle.DoMoreBattle)
                     {
                         GameEnd = true;
+                        p.TSearchGame.Abort();
                         p.TSearchGame.Join();
                         break;
                     }
 
-                    playerDic.Remove(p.PID);
+                    playerState[p.PID] = false;
                     Battle battle = new Battle(p, p2);
                     battle.DoBattle();
                     players.Enqueue(p);
@@ -323,6 +342,7 @@ namespace ELOsimulation
                     p.TSearchGame.Join();
                 }
             }
+            playerState[p.PID] = false;
             ThreadCount--;
         }
 
@@ -371,7 +391,7 @@ namespace ELOsimulation
 
             Queue<SegmentNode> queue = new Queue<SegmentNode>();
             SegmentNode temp;
-            
+
             queue.Enqueue(Root);
             while (queue.Count > 0)
             {
