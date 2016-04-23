@@ -33,6 +33,7 @@ namespace ELOsimulation
 
         int rating;
         int pID;
+        int battleCount;
 
         Thread tSearchGame;
 
@@ -58,12 +59,15 @@ namespace ELOsimulation
             private set
             {
                 rating = value < 0 ? 0 : value;
+                BattleCount++;
                 if (HighestRating < rating)
                 {
                     HighestRating = rating;
                 }
             }
         }
+
+        public int BattleCount { get { return battleCount; } private set { battleCount = value; } }
 
         public int PID { get { return pID; } }
         public Thread TSearchGame { get { return tSearchGame; } set { tSearchGame = value; } }
@@ -124,7 +128,7 @@ namespace ELOsimulation
 
     class Battle
     {
-        const int BATTLELIMIT = 2000;
+        const int BATTLELIMIT = 5000;
         static int BattleCount;
         static Random RAN = new Random();
 
@@ -203,10 +207,11 @@ namespace ELOsimulation
                     {
                         continue;
                     }
-                    if (tempPlayer.TSearchGame != null && tempPlayer.TSearchGame.IsAlive)
+                    if ((tempPlayer.TSearchGame != null && tempPlayer.TSearchGame.IsAlive) || playerState[tempPlayer.PID])
                     {
                         //Console.WriteLine("hehe--------------------" + tempPlayer.PID);
                         tempPlayer.TSearchGame.Abort();
+                        playerState[tempPlayer.PID] = false;
                         players.Enqueue(tempPlayer);
                     }
                     else
@@ -253,7 +258,7 @@ namespace ELOsimulation
                         Console.Write("E:" + (i * 5 + j));
                         continue;
                     }
-                    Console.Write(AllPlayers[i * 5 + j].Rating + "\t");
+                    Console.Write(AllPlayers[i * 5 + j].Rating + ":" + AllPlayers[i * 5 + j].BattleCount + "\t");
                 }
                 Console.Write("\n\r");
             }
@@ -271,12 +276,13 @@ namespace ELOsimulation
             p.TSearchGame = null;
             p.TSearchGame = new Thread(new ParameterizedThreadStart(SearchGameThread));
             p.TSearchGame.IsBackground = true;
-            if (p.TSearchGame.IsAlive)
-            {
-                p.TSearchGame.Abort();
-                players.Enqueue(p);
-                return;
-            }
+            //if (p.TSearchGame.IsAlive || playerState[p.PID])
+            //{
+            //    p.TSearchGame.Abort();
+            //    playerState[p.PID] = false;
+            //    players.Enqueue(p);
+            //    return;
+            //}
             playerState[p.PID] = true;
             p.TSearchGame.Start(p);
         }
@@ -284,13 +290,14 @@ namespace ELOsimulation
         void SearchGameThread(object obj)
         {
             WaitRandomTime();
+            Player p = (Player)obj;
 
             if (GameEnd)
             {
+                playerState[p.PID] = false;
                 return;
             }
 
-            Player p = (Player)obj;
             Console.WriteLine("Start Thread ---------------------- PID ::: " + p.PID);
             int range, lowerBound, upperBound;
             SegmentNode node = new SegmentNode();
@@ -298,6 +305,7 @@ namespace ELOsimulation
             {
                 if (GameEnd)
                 {
+                    playerState[p.PID] = false;
                     return;
                 }
                 Console.WriteLine("Search Range ---------------------- " + SEARCHRANGE[i]);
@@ -325,7 +333,6 @@ namespace ELOsimulation
                 else
                 {
                     Player p2 = (Player)anotherNode.Value;
-                    playerState[p2.PID] = false;
                     if (p2.TSearchGame.IsAlive)
                     {
                         if (LockID == p2.PID)
@@ -333,15 +340,14 @@ namespace ELOsimulation
                             Unlock();
                         }
                         p2.TSearchGame.Abort();
-                        //p2.TSearchGame.Join();
                     }
+                    playerState[p2.PID] = false;
 
                     if (!Battle.DoMoreBattle)
                     {
                         GameEnd = true;
                         playerState[p.PID] = false;
                         //p.TSearchGame.Abort();
-                        //p.TSearchGame.Join();
                         return;
                     }
 
@@ -351,7 +357,6 @@ namespace ELOsimulation
                     players.Enqueue(p);
                     players.Enqueue(p2);
                     //p.TSearchGame.Abort();
-                    //p.TSearchGame.Join();
                     return;
                 }
             }
