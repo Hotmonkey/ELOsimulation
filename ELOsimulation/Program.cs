@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.IO;
 
 namespace ELOsimulation
 {
@@ -128,7 +129,7 @@ namespace ELOsimulation
 
     class Battle
     {
-        const int BATTLELIMIT = 5000;
+        const int BATTLELIMIT = 10000;
         static int BattleCount;
         static Random RAN = new Random();
 
@@ -164,7 +165,7 @@ namespace ELOsimulation
 
     class Game
     {
-        const int PLAYERCOUNT = 50;
+        const int PLAYERCOUNT = 100;
         const int LOCKINTERVAL = 10;
         const int WAITINTERVAL = 1000;
         static readonly int[] SEARCHRANGE = new int[10] { 30, 60, 90, 120, 150, 180, 210, 240, 270, 300 };
@@ -176,6 +177,7 @@ namespace ELOsimulation
         static SegmentTree threadTree = new SegmentTree();
         static readonly Random random = new Random();
         static int LockID = -1;
+        static int ZeroTime;
 
         static Game instance;
 
@@ -190,7 +192,7 @@ namespace ELOsimulation
 
         public void StartGame()
         {
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 100; i++)
             {
                 AllPlayers[i] = new Player();
                 players.Enqueue(AllPlayers[i]);
@@ -219,6 +221,7 @@ namespace ELOsimulation
                         SearchGame(tempPlayer);
                     }
                 }
+                ZeroTime++;
                 if (tempPlayer == null)
                 {
                     if (players.Count > 0)
@@ -248,7 +251,10 @@ namespace ELOsimulation
             }
             Console.WriteLine("-----------------------------Game End!---------------------------------");
             Console.WriteLine("Battle Count ---------------------------- " + Battle.BATTLECOUNT);
-            Console.WriteLine("Alive Count ---------------------------- " + aliveCount);
+            Console.WriteLine("Alive Count ----------------------------- " + aliveCount);
+            Console.WriteLine("Zero Time ------------------------------- " + ZeroTime);
+
+            string result = "";
             for (int i = 0; i < PLAYERCOUNT / 5; i++)
             {
                 for (int j = 0; j < 5; j++)
@@ -256,13 +262,17 @@ namespace ELOsimulation
                     if (AllPlayers[i * 5 + j] == null)
                     {
                         Console.Write("E:" + (i * 5 + j));
+                        result += "-1,";
                         continue;
                     }
                     Console.Write(AllPlayers[i * 5 + j].Rating + ":" + AllPlayers[i * 5 + j].BattleCount + "\t");
+                    result += AllPlayers[i * 5 + j].Rating.ToString() + ",";
                 }
                 Console.Write("\n\r");
+                result += "\n\r";
             }
             Console.WriteLine("High:::" + Player.HighestRating);
+            File.WriteAllText("result3.txt", result);
         }
 
         void SearchGame(Player p)
