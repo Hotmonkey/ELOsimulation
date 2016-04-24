@@ -29,12 +29,14 @@ namespace ELOsimulation
         const int BASELINE = 0;
         static int PlayerCount;
         static int highestRating;
+        //static int BATTLELIMIT = 300;
 
         public static int HighestRating { get { return highestRating; } private set { highestRating = value; } }
 
         int rating;
         int pID;
         int battleCount;
+        float battleCapability;
 
         Thread tSearchGame;
 
@@ -42,6 +44,12 @@ namespace ELOsimulation
         {
             AddPlayer();
             Rating = rating;
+        }
+
+        public Player(float battleCapability)
+        {
+            AddPlayer();
+            this.battleCapability = battleCapability;
         }
 
         public Player()
@@ -69,6 +77,7 @@ namespace ELOsimulation
         }
 
         public int BattleCount { get { return battleCount; } private set { battleCount = value; } }
+        //public bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
 
         public int PID { get { return pID; } }
         public Thread TSearchGame { get { return tSearchGame; } set { tSearchGame = value; } }
@@ -107,7 +116,7 @@ namespace ELOsimulation
             return (int)(K * (CalcScore(br) - CalcExpectation(opponentRating)));
         }
 
-        public float CalcExpectation(int opponentRating)
+        float CalcExpectation(int opponentRating)
         {
             return 1 / (1 + (float)Math.Pow(10, (double)((opponentRating - rating) / 400.0f)));
         }
@@ -124,6 +133,11 @@ namespace ELOsimulation
                 default:
                     return S_LOSE;
             }
+        }
+
+        public float CalcWinPercentage(Player p)
+        {
+            return (battleCapability - p.battleCapability) / 2 + 50;
         }
     }
 
@@ -149,7 +163,7 @@ namespace ELOsimulation
         {
             Console.WriteLine("Do Battle ----------------- " + p1.PID + " VS " + p2.PID);
             BattleCount++;
-            float e1 = p1.CalcExpectation(p2.Rating);
+            float e1 = p1.CalcWinPercentage(p2);
             if ((float)RAN.NextDouble() <= e1)
             {
                 p1.CalcRating(BattleResult.WIN, p2);
@@ -177,7 +191,7 @@ namespace ELOsimulation
         static SegmentTree threadTree = new SegmentTree();
         static readonly Random random = new Random();
         static int LockID = -1;
-        static int ZeroTime;
+        static long ZeroTime;
 
         static Game instance;
 
@@ -192,9 +206,9 @@ namespace ELOsimulation
 
         public void StartGame()
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < PLAYERCOUNT; i++)
             {
-                AllPlayers[i] = new Player();
+                AllPlayers[i] = new Player((float)(i + 1));
                 players.Enqueue(AllPlayers[i]);
             }
 
@@ -209,7 +223,7 @@ namespace ELOsimulation
                     {
                         continue;
                     }
-                    if ((tempPlayer.TSearchGame != null && tempPlayer.TSearchGame.IsAlive) || playerState[tempPlayer.PID])
+                    if ((tempPlayer.TSearchGame != null && tempPlayer.TSearchGame.ThreadState == ThreadState.Running) || playerState[tempPlayer.PID])
                     {
                         //Console.WriteLine("hehe--------------------" + tempPlayer.PID);
                         tempPlayer.TSearchGame.Abort();
@@ -268,11 +282,11 @@ namespace ELOsimulation
                     Console.Write(AllPlayers[i * 5 + j].Rating + ":" + AllPlayers[i * 5 + j].BattleCount + "\t");
                     result += AllPlayers[i * 5 + j].Rating.ToString() + ",";
                 }
-                Console.Write("\n\r");
-                result += "\n\r";
+                Console.Write("\r\n");
+                result += "\r\n";
             }
             Console.WriteLine("High:::" + Player.HighestRating);
-            File.WriteAllText("result3.txt", result);
+            File.WriteAllText("result4.txt", result);
         }
 
         void SearchGame(Player p)
@@ -282,11 +296,16 @@ namespace ELOsimulation
                 return;
             }
 
+            //if (!p.DoMoreBattle)
+            //{
+            //    return;
+            //}
+
             Console.WriteLine("Search Game ------------------- Player " + p.PID);
             p.TSearchGame = null;
             p.TSearchGame = new Thread(new ParameterizedThreadStart(SearchGameThread));
             p.TSearchGame.IsBackground = true;
-            //if (p.TSearchGame.IsAlive || playerState[p.PID])
+            //if (p.TSearchGame.ThreadState == ThreadState.Running || playerState[p.PID])
             //{
             //    p.TSearchGame.Abort();
             //    playerState[p.PID] = false;
@@ -343,7 +362,7 @@ namespace ELOsimulation
                 else
                 {
                     Player p2 = (Player)anotherNode.Value;
-                    if (p2.TSearchGame.IsAlive)
+                    if (p2.TSearchGame.ThreadState == ThreadState.Running)
                     {
                         if (LockID == p2.PID)
                         {
