@@ -29,7 +29,7 @@ namespace ELOsimulation
         const int BASELINE = 0;
         static int PlayerCount;
         static int highestRating;
-        //static int BATTLELIMIT = 300;
+        static int BATTLELIMIT = 210;
 
         public static int HighestRating { get { return highestRating; } private set { highestRating = value; } }
 
@@ -49,7 +49,7 @@ namespace ELOsimulation
         public Player(float battleCapability)
         {
             AddPlayer();
-            this.battleCapability = battleCapability;
+            BattleCapability = battleCapability;
         }
 
         public Player()
@@ -76,8 +76,10 @@ namespace ELOsimulation
             }
         }
 
+        public float BattleCapability { get { return battleCapability; } private set { battleCapability = value; } }
+
         public int BattleCount { get { return battleCount; } private set { battleCount = value; } }
-        //public bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
+        public bool DoMoreBattle { get { return BattleCount < BATTLELIMIT; } }
 
         public int PID { get { return pID; } }
         public Thread TSearchGame { get { return tSearchGame; } set { tSearchGame = value; } }
@@ -137,7 +139,7 @@ namespace ELOsimulation
 
         public float CalcWinPercentage(Player p)
         {
-            return (battleCapability - p.battleCapability) / 2 + 50;
+            return ((battleCapability - p.battleCapability) / 2 + 50)/100;
         }
     }
 
@@ -279,7 +281,7 @@ namespace ELOsimulation
                         result += "-1,";
                         continue;
                     }
-                    Console.Write(AllPlayers[i * 5 + j].Rating + ":" + AllPlayers[i * 5 + j].BattleCount + "\t");
+                    Console.Write(AllPlayers[i * 5 + j].Rating + ":" + AllPlayers[i * 5 + j].BattleCount + ":" + AllPlayers[i * 5 + j].BattleCapability + "\t");
                     result += AllPlayers[i * 5 + j].Rating.ToString() + ",";
                 }
                 Console.Write("\r\n");
@@ -296,10 +298,10 @@ namespace ELOsimulation
                 return;
             }
 
-            //if (!p.DoMoreBattle)
-            //{
-            //    return;
-            //}
+            if (!p.DoMoreBattle)
+            {
+                return;
+            }
 
             Console.WriteLine("Search Game ------------------- Player " + p.PID);
             p.TSearchGame = null;
